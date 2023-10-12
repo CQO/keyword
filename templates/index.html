@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta http-equiv="Content-Language" content="utf-8" />
+  <title>页面</title>
+  <meta content="all" name="robots" />
+  <meta name="description" content="" />
+  <meta name="keywords" content="" />
+  <meta name="filetype" content="1" />
+  <meta name="publishedtype" content="1" />
+  <meta name="pagetype" content="2" />
+  <meta name="catalogs" content="" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0">
+  <!--优先使用 IE 最新版本和 Chrome-->
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <!--360 使用Google Chrome Frame-->
+  <meta name="renderer" content="webkit">
+  <link charset="utf-8"  rel="stylesheet" href="https://cunchu.site/work/login/standard.css">
+  <style>
+
+  </style>
+</head>
+<body>
+  <div class="box owo">
+    <h3>网址关键词提取</h3>
+    <textarea style="height: 300px;">
+https://www.52pojie.cn/
+https://tool.lu/
+http://www.gjw123.com/
+https://paveldogreat.github.io/WebGL-Fluid-Simulation/
+https://www.reg007.com/
+https://gaoqing.la/
+https://t.jiayoushichang.com/extension/index
+https://www.cilixiong.com/
+https://www.yinfans.me/
+http://www.dayanzai.me/
+https://youquhome.com/
+https://xinquji.com/
+https://fuun.fun/
+https://www.qiuziyuan.net/
+https://tinypng.com/
+https://www.ypojie.com/
+https://www.processon.com/
+https://web.baimiaoapp.com/
+http://whatbuytoday.com/re/chat
+http://www.pickfree.cn/
+https://t.jiayoushichang.com/extension/index
+https://hao.logosc.cn/
+https://orxing.top/nav/
+https://c.runoob.com/
+https://qinggongju.com/
+https://nav.guidebook.top/
+http://cxy521.com/
+https://www.ydyno.com/
+https://blog.zhheo.com/
+https://yisous.xyz/
+https://blog.jayhrn.com/
+https://www.tool77.com/
+https://v.qq.com/
+https://www.bilibili.com/
+https://www.cnwml.com/
+https://www.iqiyi.com/
+https://www.acfun.cn/
+https://cupfox.app/
+https://cli.im/
+http://weavesilk.com/
+https://www.toolfk.com/
+https://watereffect.net/
+https://photomosh.com/
+https://www.sojson.com/
+https://encycolorpedia.cn/
+https://www.douyin.com/
+https://www.xiaohongshu.com
+https://cowtransfer.com/
+https://www.mustdown.com/
+https://www.likefont.com/
+https://www.toutiao.com/
+https://baijiahao.baidu.com/builder/theme/bjh/login
+https://www.kuaishou.com/new-reco</textarea>
+      <div class="owo button" onclick="check()">批量检查</div>
+      <div class="panel">
+        <table class="table-fill">
+          <thead>
+          <tr>
+          <th class="text-left">网站地址</th>
+          <th class="text-left">关键词</th>
+          </tr>
+          </thead>
+          <tbody class="table-hover">
+          </tbody>
+        </table>
+      </div>
+      <div class="owo button" onclick="getValue()">获取检查结果</div>
+  </div>
+  <script>
+    function check() {
+      let tempList = document.querySelector('textarea').value
+      tempList = tempList.split('\n')
+      var myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+
+      var raw = JSON.stringify({
+        "urlList": tempList
+      });
+
+      var requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: raw,
+        redirect: 'follow'
+      };
+
+      fetch("/webSite", requestOptions)
+        .then(response => response.text())
+        .then(result => {
+          getValue()
+        })
+        .catch(error => console.log('error', error));
+      console.log(tempList)
+    }
+    function getValue () {
+      var myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+
+      var requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        redirect: 'follow'
+      };
+
+      fetch("/getValue", requestOptions)
+        .then(response => response.json())
+        .then(result => {
+          console.log(result)
+          let domList = ``
+          result.data.forEach(element => {
+            domList += `<tr>
+      <td class="text-left">${element[0]}</td>
+      <td class="text-left">${element[1]}</td>
+      </tr>`
+          });
+          document.querySelector('.table-hover').innerHTML = domList
+        })
+        .catch(error => console.log('error', error));
+    }
+    getValue()
+  </script>
+  <script src="https://cunchu.site/work/login/standard.js"></script>
+</body>
+
+</html>
