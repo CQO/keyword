@@ -1,6 +1,7 @@
 import re
 import requests
 import sqlite3
+from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, jsonify
 
 
@@ -12,9 +13,7 @@ def home():
     return render_template('index.html')
 
 def clearData(url, strTemp):
-    print(strTemp)
-    
-    strTemp = re.split(r'[ |,、]|-', strTemp)
+    strTemp = re.split(r'[ |,、，]|-', strTemp)
     # 清理空
     strTemp = [x for x in strTemp if x != ""]
     # 连接到数据库，如果不存在，则创建一个新的数据库
@@ -47,20 +46,22 @@ def checkDom(url):
     }
 
     response = requests.request("GET", url, headers=headers, data=payload)
+    # 指定编码为 'utf-8'（你可以根据需要更改为其他编码）
+    response.encoding = 'utf-8'
     domStr = response.text
-    match = re.search(r'name="keywords" content="(.*?)"', domStr)
-    if (match):
-        matchTemp = match.group(1)
+    soup = BeautifulSoup(domStr, 'html.parser')
+    matchTemp = soup.find('meta', {'name': 'keywords'})
+    if (matchTemp and matchTemp.get('content')):
+        matchTemp = matchTemp.get('content')
         print('[keywords]' + matchTemp)
         return clearData(url, matchTemp)
-    match = re.search(r'name="description" content="(.*?)"', domStr)
-    if (match):
-        matchTemp = match.group(1)
+    matchTemp = soup.find('meta', {'name': 'description'})
+    if (matchTemp and matchTemp.get('content')):
+        matchTemp = matchTemp.get('content')
         print('[description]' + matchTemp)
         return clearData(url, matchTemp)
-    match = re.search(r'title>(.*?)</title', domStr)
-    if (match):
-        matchTemp = match.group(1)
+    matchTemp = soup.title.string
+    if (matchTemp):
         print('[title]' + matchTemp)
         return clearData(url, matchTemp)
 
@@ -80,6 +81,18 @@ def post_example():
         if (key.startswith("http")):
             keyWOrdData = checkDom(key)
     return jsonify({"data": keyWOrdData})
+
+@app.route('/deleteItem', methods=['POST'])
+def deleteItem():
+    # 获取 JSON 数据
+    data = request.json
+    conn = sqlite3.connect('mydatabase.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM keyword WHERE url = ?", (data["url"],))
+
+    conn.commit()
+    conn.close()
+    return jsonify({"err": 0})
 
 @app.route('/getValue', methods=['POST'])
 def getValue():

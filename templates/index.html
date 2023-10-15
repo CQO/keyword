@@ -19,7 +19,10 @@
   <meta name="renderer" content="webkit">
   <link charset="utf-8"  rel="stylesheet" href="https://cunchu.site/work/login/standard.css">
   <style>
-
+    .owo td {
+      word-break: break-all;
+    }
+    
   </style>
 </head>
 <body>
@@ -81,11 +84,12 @@ https://baijiahao.baidu.com/builder/theme/bjh/login
 https://www.kuaishou.com/new-reco</textarea>
       <div class="owo button" onclick="check()">批量检查</div>
       <div class="panel">
-        <table class="table-fill">
+        <table class="table-fill" style="width: 100%;">
           <thead>
           <tr>
-          <th class="text-left">网站地址</th>
+          <th class="text-left" style="width: 200px;">网站地址</th>
           <th class="text-left">关键词</th>
+          <th class="text-left" style="width: 60px;">操作</th>
           </tr>
           </thead>
           <tbody class="table-hover">
@@ -139,6 +143,7 @@ https://www.kuaishou.com/new-reco</textarea>
             domList += `<tr>
       <td class="text-left">${element[0]}</td>
       <td class="text-left">${element[1]}</td>
+      <td class="text-left"><span onclick="deleteItem('${element[0]}')">删除</span></td>
       </tr>`
           });
           document.querySelector('.table-hover').innerHTML = domList
@@ -146,6 +151,28 @@ https://www.kuaishou.com/new-reco</textarea>
         .catch(error => console.log('error', error));
     }
     getValue()
+    function deleteItem (url) {
+      var myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+
+      var raw = JSON.stringify({
+        "url": url
+      });
+
+      var requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: raw,
+        redirect: 'follow'
+      };
+
+      fetch("/deleteItem", requestOptions)
+        .then(response => response.text())
+        .then(result => {
+          getValue()
+        })
+        .catch(error => console.log('error', error));
+    }
   </script>
   <script src="https://cunchu.site/work/login/standard.js"></script>
 </body>
