@@ -12,6 +12,14 @@ app = Flask(__name__)
 def home():
     return render_template('index.html')
 
+@app.route('/page2')
+def page2():
+    return render_template('index2.html')
+
+@app.route('/page3')
+def page3():
+    return render_template('index3.html')
+
 def clearData(url, strTemp):
     strTemp = re.split(r'[ |,、，]|-', strTemp)
     # 清理空
@@ -89,6 +97,18 @@ def deleteItem():
     conn = sqlite3.connect('mydatabase.db')
     cursor = conn.cursor()
     cursor.execute("DELETE FROM keyword WHERE url = ?", (data["url"],))
+
+    conn.commit()
+    conn.close()
+    return jsonify({"err": 0})
+
+@app.route('/updataItem', methods=['POST'])
+def updataItem():
+    # 获取 JSON 数据
+    data = request.json
+    conn = sqlite3.connect('mydatabase.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE keyword SET keyword = '?' WHERE url = '?';", (data["keyword"], data["url"]))
 
     conn.commit()
     conn.close()
