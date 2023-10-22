@@ -114,16 +114,7 @@
       fetch("/getValue", requestOptions)
         .then(response => response.json())
         .then(result => {
-          console.log(result)
-          let domList = ``
-          result.data.forEach(element => {
-            domList += `<tr>
-      <td class="text-left">${element[0]}</td>
-      <td class="text-left">${element[1]}</td>
-      <td class="text-left"><span onclick="deleteItem('${element[0]}')">删除</span></td>
-      </tr>`
-          });
-          document.querySelector('.table-hover').innerHTML = domList
+          location.href='/page2'
         })
         .catch(error => console.log('error', error));
     }

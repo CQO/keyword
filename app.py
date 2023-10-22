@@ -98,10 +98,12 @@ def checkDom(url):
         matchTemp = matchTemp.get('content')
         print('[description]' + matchTemp)
         return clearData(url, matchTemp)
-    matchTemp = soup.title.string
-    if (matchTemp):
-        print('[title]' + matchTemp)
-        return clearData(url, matchTemp)
+    if (soup.title):
+        matchTemp = soup.title.string
+        if (matchTemp):
+            print('[title]' + matchTemp)
+            return clearData(url, matchTemp)
+    return clearData(url, '')
 
 @app.route('/webSite', methods=['POST'])
 def post_example():
