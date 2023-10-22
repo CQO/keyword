@@ -68,7 +68,8 @@
       <div class="right-box">
         <h3>网址关键词提取</h3>
         <textarea style="height: 300px;"></textarea>
-          <div class="owo button" onclick="check()">批量检查</div>
+        <div class="owo button" onclick="check()">批量检查</div>
+        <div class="owo button"><input type="file" style="position: absolute;width: 100%;height: 100%;opacity: 0;" id="fileInput" />导入CSV</div>
       </div>
     </div>
     
@@ -95,7 +96,7 @@
       fetch("/webSite", requestOptions)
         .then(response => response.text())
         .then(result => {
-          getValue()
+          location.href = 'page2'
         })
         .catch(error => console.log('error', error));
       console.log(tempList)
@@ -149,6 +150,35 @@
         })
         .catch(error => console.log('error', error));
     }
+    function csvToArr (str) {
+      str = str.replace(/\r/g, '\n')
+      str = str.replace(/\n\n/g, '\n')
+      str = str.split('\n')
+      let reArr = []
+      for (let ind = 0; ind < str.length; ind++) {
+        let temp = str[ind]
+        reArr.push(temp.split(','))
+      }
+      return reArr
+    }
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(event) {
+            const fileContent = event.target.result;
+            let temp = csvToArr(fileContent)
+            console.log(temp);
+            let temp2 = ``
+            temp.forEach(element => {
+              temp2 += `${element[0]}\n`
+            });
+            document.querySelector('textarea').value = temp2
+        };
+
+        // 读取文件内容为文本
+        reader.readAsText(file);
+    });
   </script>
   <script src="https://cunchu.site/work/login/standard.js"></script>
 </body>
