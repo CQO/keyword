@@ -120,7 +120,7 @@ def post_example():
     for key in data['urlList']:
         if (key.startswith("http")):
             keyWOrdData = checkDom(key)
-    return jsonify({"data": keyWOrdData})
+    return jsonify({"err": 0})
 
 @app.route('/deleteItem', methods=['POST'])
 def deleteItem():
@@ -212,8 +212,8 @@ def login():
     else:
         return jsonify({"err": 1, "msg": "用户名或密码错误!"})
 
-@app.route('/updataLike', methods=['POST'])
-def updataLike():
+@app.route('/like', methods=['POST'])
+def like():
     # 获取 JSON 数据
     data = request.json
     conn = sqlite3.connect('mydatabase.db')
@@ -227,9 +227,9 @@ def updataLike():
         dataTemp = json.loads(dataTemp[0])
         
         if (data["url"] not in dataTemp):
-            dataTemp[data["url"]] = data["num"]
+            dataTemp[data["url"]] = 1
             
-        dataTemp[data["url"]] = dataTemp[data["url"]] + data["num"]
+        dataTemp[data["url"]] = dataTemp[data["url"]] + 1
         print("UPDATE user SET data = '?' WHERE username = '?';", (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
 
@@ -239,6 +239,51 @@ def updataLike():
     else:
         conn.close()
         return jsonify({"err": 1, "msg": "用户名或密码错误!"})
+
+@app.route('/unLike', methods=['POST'])
+def unLike():
+    # 获取 JSON 数据
+    data = request.json
+    conn = sqlite3.connect('mydatabase.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT data FROM user WHERE username = '" + data["username"] + "' AND password = '" + data["password"] + "';")
+
+    conn.commit()
+    dataTemp = cursor.fetchone()
+    
+    if dataTemp:
+        dataTemp = json.loads(dataTemp[0])
+        
+        if (data["url"] not in dataTemp):
+            dataTemp[data["url"]] = -1
+            
+        dataTemp[data["url"]] = dataTemp[data["url"]] - 1
+        print("UPDATE user SET data = '?' WHERE username = '?';", (json.dumps(dataTemp), data["username"]))
+        cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
+
+        conn.commit()
+        conn.close()
+        return jsonify({"err": 0, "msg": "成功"})
+    else:
+        conn.close()
+        return jsonify({"err": 1, "msg": "用户名或密码错误!"})
+
+@app.route('/addKeyWord', methods=['POST'])
+def addKeyWord():
+    # 获取 JSON 数据
+    data = request.json
+    conn = sqlite3.connect('mydatabase.db')
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM `keyword` WHERE url ='" + data["url"] + "'")
+    rows = cursor.fetchone()
+    conn.close()
+    if (not rows):
+        clearData(data["url"], data["matchTemp"])
+        return jsonify({"err": 0, "msg": "成功"})
+    return jsonify({"err": 1, "msg": "网址已存在"})
+
+
 
 @app.route('/getValue', methods=['POST'])
 def getValue():
