@@ -82,27 +82,30 @@ def checkDom(url):
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
     }
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-    # 指定编码为 'utf-8'（你可以根据需要更改为其他编码）
-    response.encoding = 'utf-8'
-    domStr = response.text
-    soup = BeautifulSoup(domStr, 'html.parser')
-    matchTemp = soup.find('meta', {'name': 'keywords'})
-    if (matchTemp and matchTemp.get('content')):
-        matchTemp = matchTemp.get('content')
-        print('[keywords]' + matchTemp)
-        return clearData(url, matchTemp)
-    matchTemp = soup.find('meta', {'name': 'description'})
-    if (matchTemp and matchTemp.get('content')):
-        matchTemp = matchTemp.get('content')
-        print('[description]' + matchTemp)
-        return clearData(url, matchTemp)
-    if (soup.title):
-        matchTemp = soup.title.string
-        if (matchTemp):
-            print('[title]' + matchTemp)
+    try:
+        response = requests.request("GET", url, headers=headers, data=payload)
+        response.raise_for_status()
+        # 指定编码为 'utf-8'（你可以根据需要更改为其他编码）
+        response.encoding = 'utf-8'
+        domStr = response.text
+        soup = BeautifulSoup(domStr, 'html.parser')
+        matchTemp = soup.find('meta', {'name': 'keywords'})
+        if (matchTemp and matchTemp.get('content')):
+            matchTemp = matchTemp.get('content')
+            print('[keywords]' + matchTemp)
             return clearData(url, matchTemp)
+        matchTemp = soup.find('meta', {'name': 'description'})
+        if (matchTemp and matchTemp.get('content')):
+            matchTemp = matchTemp.get('content')
+            print('[description]' + matchTemp)
+            return clearData(url, matchTemp)
+        if (soup.title):
+            matchTemp = soup.title.string
+            if (matchTemp):
+                print('[title]' + matchTemp)
+                return clearData(url, matchTemp)
+    except requests.HTTPError as error:
+        print(f'HTTP error occurred: {error}')
     return clearData(url, '')
 
 @app.route('/webSite', methods=['POST'])
@@ -110,17 +113,12 @@ def post_example():
     # 获取 JSON 数据
     data = request.json
 
-    # 获取 form 数据
-    # data = request.form
-
-    # 获取普通 POST 数据
-    # value = request.form.get('key')
-
     # 对于本示例，我们只是将接收到的数据返回为 JSON 响应
     for key in data['urlList']:
         if (key.startswith("http")):
             keyWOrdData = checkDom(key)
     return jsonify({"err": 0})
+
 
 @app.route('/deleteItem', methods=['POST'])
 def deleteItem():
@@ -180,7 +178,7 @@ def sendSMS():
     data = request.json
     conn = sqlite3.connect('mydatabase.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM user WHERE username = '" + data["username"] + "';")
+    cursor.execute("SELECT * FROM user WHERE username = '%s';" % (data["username"]))
 
     conn.commit()
     dataTemp = cursor.fetchone()
@@ -230,7 +228,7 @@ def like():
             dataTemp[data["url"]] = 1
             
         dataTemp[data["url"]] = dataTemp[data["url"]] + 1
-        print("UPDATE user SET data = '?' WHERE username = '?';", (json.dumps(dataTemp), data["username"]))
+        print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
 
         conn.commit()
@@ -258,7 +256,7 @@ def unLike():
             dataTemp[data["url"]] = -1
             
         dataTemp[data["url"]] = dataTemp[data["url"]] - 1
-        print("UPDATE user SET data = '?' WHERE username = '?';", (json.dumps(dataTemp), data["username"]))
+        print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
 
         conn.commit()
@@ -268,20 +266,32 @@ def unLike():
         conn.close()
         return jsonify({"err": 1, "msg": "用户名或密码错误!"})
 
+
+@app.route('/recommend', methods=['POST'])
+def recommend():
+    # 连接到数据库，如果不存在，则创建一个新的数据库
+    conn = sqlite3.connect('mydatabase.db')
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM `keyword`")
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify({"err": 0, "data": rows[int(random.uniform(0, len(rows) - 1))]})
+
 @app.route('/addKeyWord', methods=['POST'])
 def addKeyWord():
     # 获取 JSON 数据
     data = request.json
     conn = sqlite3.connect('mydatabase.db')
     cursor = conn.cursor()
-    
-    cursor.execute("SELECT * FROM `keyword` WHERE url ='" + data["url"] + "'")
-    rows = cursor.fetchone()
+    for item in data["list"]:
+        cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
+        rows = cursor.fetchone()
+        
+        if (not rows):
+            clearData(item["url"], item["matchTemp"])
     conn.close()
-    if (not rows):
-        clearData(data["url"], data["matchTemp"])
-        return jsonify({"err": 0, "msg": "成功"})
-    return jsonify({"err": 1, "msg": "网址已存在"})
+    return jsonify({"err": 0, "msg": "操作已提交"})
 
 
 
