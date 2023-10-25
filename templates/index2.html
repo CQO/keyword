@@ -71,12 +71,22 @@
       </div>
       <div class="right-box">
         <div class="panel">
+          <div class="owo button-bar">
+            <input type="text" id="gjc" placeholder="关键词" style=" width: 200px; margin: 10px; ">
+            <input type="text" id="wz" placeholder="网址" style=" width: 200px; margin: 10px; ">
+            <!-- <div class="owo button">查询</div> -->
+            <div class="owo button" onclick="tianjia()">添加</div>
+          </div>
           <table class="table-fill" style="width: 100%;">
             <thead>
             <tr>
             <th class="text-left" style="width: 15px;"><input type="checkbox" onclick="qx(this)" name="dx" value=""></th>
+            <th class="text-left" style="width: 20px;">ID</th>
             <th class="text-left" style="width: 200px;">网站地址</th>
             <th class="text-left">关键词</th>
+            <th class="text-left">来源</th>
+            <th class="text-left">喜欢数量</th>
+            <th class="text-left">添加时间</th>
             <th class="text-left" style="width: 90px;">操作</th>
             </tr>
             </thead>
@@ -101,7 +111,8 @@
       myHeaders.append("Content-Type", "application/json");
 
       var raw = JSON.stringify({
-        "urlList": tempList
+        "urlList": tempList,
+        "source": "后台添加"
       });
 
       var requestOptions = {
@@ -141,6 +152,10 @@
       <td class="text-left" style="width: 15px;"><input type="checkbox" name="dx" value="${element[0]}"></td>
       <td class="text-left">${element[0]}</td>
       <td class="text-left">${element[1]}</td>
+      <td class="text-left">${element[2]}</td>
+      <td class="text-left">${element[3]}</td>
+      <td class="text-left">${element[4]}</td>
+      <td class="text-left">${new Date(element[5] * 1000).toLocaleString()}</td>
       <td class="text-left"><span onclick="deleteItem('${element[0]}')">删除</span><span onclick="editItem('${element[0]}')">修改</span></td>
       </tr>`
           });
@@ -207,6 +222,36 @@
           deleteItem(element.value)
         }
       });
+    }
+    function tianjia () {
+      var myHeaders = new Headers();
+      myHeaders.append("Content-type", "application/json");
+
+      var raw = JSON.stringify({
+        "user": "后台添加",
+        "list": [
+          {
+            "matchTemp": window.gjc.value,
+            "url": window.wz.value
+          },
+        ]
+      });
+
+      var requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: raw,
+        redirect: 'follow'
+      };
+
+      fetch("/addKeyWord", requestOptions)
+        .then(response => response.text())
+        .then(result => {
+          setTimeout(() => {
+            getValue()
+          }, 1000);
+        })
+        .catch(error => console.log('error', error));
     }
   </script>
   <script src="https://cunchu.site/work/login/standard.js"></script>

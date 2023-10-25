@@ -1,13 +1,20 @@
 import re
 import requests
-import sqlite3
+import time
 import json
 import random
+import mysql.connector
 from flask_cors import CORS
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, jsonify
 
-
+# 创建连接
+mydb = mysql.connector.connect(
+  host="logs.lamp.run",          # 数据库主机地址
+  user="root",     # 数据库用户名
+  password="mmit7750", # 数据库密码
+  database="keyword"  # 数据库名称，可选
+)
 
 app = Flask(__name__)
 CORS(app)  # 默认允许所有域名进行跨域请求
@@ -40,8 +47,14 @@ def sendSMSTo(yzm, phone):
 
     return response.text
 
+def clearLen(list):
+    newList = []
+    for item in list:
+        if (len(item) > 1 and len(item) < 6):
+            newList.append(item)
+    return newList
 
-def clearData(url, strTemp):
+def clearData(url, strTemp, source):
     if ('403 ' in strTemp):
         strTemp = ''
     strTemp = re.split(r'[ |,、，]|-', strTemp)
@@ -49,30 +62,39 @@ def clearData(url, strTemp):
     strTemp = [x for x in strTemp if x != ""]
     # 分词
     for key in strTemp:
-        if (len(key) > 12):
-            strTemp.remove(key)
-            response = requests.request("GET", "https://www.jsonin.com/fenci.php?msg=" + key, headers={}, data={})
+        if (len(key) > 6):
+            response = requests.request("GET", "https://api.pearktrue.cn/api/fenci/?word=" + key, headers={}, data={})
             fcData =  json.loads(response.text)
-            strTemp = strTemp +fcData
-    # 连接到数据库，如果不存在，则创建一个新的数据库
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
+            strTemp = strTemp + fcData["data"]
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    strTemp = clearLen(strTemp)
     print(strTemp)
-    cursor.execute("INSERT INTO keyword (url, keyword) VALUES (?, ?)", (url, str(strTemp)))
+    cursor.execute("INSERT INTO `keyword` (url, data, source, likeNum, time) VALUES ('%s', \"%s\", '%s', '0', '%s')" % (url, strTemp, source, int(time.time())))
 
-    conn.commit()
-    conn.close()
+    mydb.commit()
+    mydb.close()
     return strTemp
 
 
-def checkDom(url):
-    # 连接到数据库，如果不存在，则创建一个新的数据库
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
-    
+def checkDom(url, source):
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
     cursor.execute("SELECT * FROM `keyword` WHERE url ='" + url + "'")
     rows = cursor.fetchone()
-    conn.close()
+    mydb.close()
     if (rows):
         print(rows)
         return rows[1]
@@ -93,30 +115,30 @@ def checkDom(url):
         if (matchTemp and matchTemp.get('content')):
             matchTemp = matchTemp.get('content')
             print('[keywords]' + matchTemp)
-            return clearData(url, matchTemp)
+            return clearData(url, matchTemp, source)
         matchTemp = soup.find('meta', {'name': 'description'})
         if (matchTemp and matchTemp.get('content')):
             matchTemp = matchTemp.get('content')
             print('[description]' + matchTemp)
-            return clearData(url, matchTemp)
+            return clearData(url, matchTemp, source)
         if (soup.title):
             matchTemp = soup.title.string
             if (matchTemp):
                 print('[title]' + matchTemp)
-                return clearData(url, matchTemp)
+                return clearData(url, matchTemp, source)
     except requests.HTTPError as error:
         print(f'HTTP error occurred: {error}')
-    return clearData(url, '')
+    return clearData(url, '', source)
 
 @app.route('/webSite', methods=['POST'])
-def post_example():
+def webSite():
     # 获取 JSON 数据
     data = request.json
 
     # 对于本示例，我们只是将接收到的数据返回为 JSON 响应
     for key in data['urlList']:
         if (key.startswith("http")):
-            keyWOrdData = checkDom(key)
+            checkDom(key, data['source'])
     return jsonify({"err": 0})
 
 
@@ -124,24 +146,36 @@ def post_example():
 def deleteItem():
     # 获取 JSON 数据
     data = request.json
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM keyword WHERE url = ?", (data["url"],))
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    cursor.execute("DELETE FROM keyword WHERE id = '%s'" % (data["url"]))
 
-    conn.commit()
-    conn.close()
+    mydb.commit()
+    mydb.close()
     return jsonify({"err": 0})
 
 @app.route('/updataItem', methods=['POST'])
 def updataItem():
     # 获取 JSON 数据
     data = request.json
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
     cursor.execute("UPDATE keyword SET keyword = '?' WHERE url = '?';", (data["keyword"], data["url"]))
 
-    conn.commit()
-    conn.close()
+    mydb.commit()
+    mydb.close()
     return jsonify({"err": 0})
 
 
@@ -151,60 +185,85 @@ def searchItem():
     key = request.args.get('key', default=None)  # default=None 意味着如果 'name' 参数不存在，则返回 None
     dataList = []
     if key:
-        conn = sqlite3.connect('mydatabase.db')
-        cursor = conn.cursor()
+        # 创建连接
+        mydb = mysql.connector.connect(
+            host="logs.lamp.run",          # 数据库主机地址
+            user="root",     # 数据库用户名
+            password="mmit7750", # 数据库密码
+            database="keyword"  # 数据库名称，可选
+        )
+        cursor = mydb.cursor(buffered=True)
         cursor.execute("SELECT * FROM keyword WHERE keyword LIKE '%" + key + "%';")
 
-        conn.commit()
+        mydb.commit()
         dataList = cursor.fetchall()
-        conn.close()
+        mydb.close()
     return jsonify({"err": 0, "data": dataList})
 
 @app.route('/register', methods=['POST'])
 def register():
     # 获取 JSON 数据
     data = request.json
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO user (username, password, data) VALUES (?, ?, '{}')", (data["username"], data["password"]))
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    cursor.execute("INSERT INTO user (username, password, data) VALUES ('%s', '%s', '{}')" % (data["username"], data["password"]))
 
-    conn.commit()
-    conn.close()
+    mydb.commit()
+    mydb.close()
     return jsonify({"err": 0, "msg": "注册成功!"})
 
 @app.route('/sendSMS', methods=['POST'])
 def sendSMS():
     # 获取 JSON 数据
     data = request.json
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
     cursor.execute("SELECT * FROM user WHERE username = '%s';" % (data["username"]))
 
-    conn.commit()
+    mydb.commit()
     dataTemp = cursor.fetchone()
     yzm = int(random.uniform(1000, 9999))
     if (dataTemp):
         # 有的话直接发短信更新
         cursor.execute("UPDATE user SET password = '%s' WHERE username = '%s';" % (str(yzm), data["username"]))
-        conn.commit()
+        mydb.commit()
+        mydb.close()
     else:
-        cursor.execute("INSERT INTO user (username, password, data) VALUES (?, ?, '{}')", (data["username"], str(yzm)))
-        conn.commit()
+        cursor.execute("INSERT INTO user (username, password, data) VALUES ('%s', '%s', '{}')" % (data["username"], str(yzm)))
+        mydb.commit()
+        mydb.close()
     sendSMSTo(str(yzm), data["username"])
-    conn.close()
     return jsonify({"err": 0, "msg": "发送成功!"})
 
 @app.route('/login', methods=['POST'])
 def login():
     # 获取 JSON 数据
     data = request.json
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
     cursor.execute("SELECT * FROM user WHERE username = '" + data["username"] + "' AND password = '" + data["password"] + "';")
 
-    conn.commit()
+    mydb.commit()
     dataTemp = cursor.fetchone()
-    conn.close()
+    mydb.close()
     if dataTemp:
         return jsonify({"err": 0, "msg": "登录成功!", "data": dataTemp})
     else:
@@ -214,11 +273,18 @@ def login():
 def like():
     # 获取 JSON 数据
     data = request.json
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT data FROM user WHERE username = '" + data["username"] + "' AND password = '" + data["password"] + "';")
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    cursor.execute("SELECT data FROM user WHERE username = '" + data["username"] + "';")
 
-    conn.commit()
+    mydb.commit()
+    
     dataTemp = cursor.fetchone()
     
     if dataTemp:
@@ -231,22 +297,28 @@ def like():
         print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
 
-        conn.commit()
-        conn.close()
+        mydb.commit()
+        mydb.close()
         return jsonify({"err": 0, "msg": "成功"})
     else:
-        conn.close()
+        mydb.close()
         return jsonify({"err": 1, "msg": "用户名或密码错误!"})
 
 @app.route('/unLike', methods=['POST'])
 def unLike():
     # 获取 JSON 数据
     data = request.json
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT data FROM user WHERE username = '" + data["username"] + "' AND password = '" + data["password"] + "';")
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    cursor.execute("SELECT data FROM user WHERE username = '" + data["username"] + "';")
 
-    conn.commit()
+    mydb.commit()
     dataTemp = cursor.fetchone()
     
     if dataTemp:
@@ -259,50 +331,65 @@ def unLike():
         print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
 
-        conn.commit()
-        conn.close()
+        mydb.commit()
+        mydb.close()
         return jsonify({"err": 0, "msg": "成功"})
     else:
-        conn.close()
+        mydb.close()
         return jsonify({"err": 1, "msg": "用户名或密码错误!"})
 
 
-@app.route('/recommend', methods=['POST'])
+@app.route('/recommend', methods=['GET'])
 def recommend():
-    # 连接到数据库，如果不存在，则创建一个新的数据库
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
-    
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
     cursor.execute("SELECT * FROM `keyword`")
     rows = cursor.fetchall()
-    conn.close()
+    mydb.close()
     return jsonify({"err": 0, "data": rows[int(random.uniform(0, len(rows) - 1))]})
 
 @app.route('/addKeyWord', methods=['POST'])
 def addKeyWord():
     # 获取 JSON 数据
     data = request.json
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
     for item in data["list"]:
         cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
         rows = cursor.fetchone()
         
         if (not rows):
-            clearData(item["url"], item["matchTemp"])
-    conn.close()
+            clearData(item["url"], item["matchTemp"], data["user"])
+    mydb.close()
     return jsonify({"err": 0, "msg": "操作已提交"})
 
 
 
 @app.route('/getValue', methods=['POST'])
 def getValue():
-    conn = sqlite3.connect('mydatabase.db')
-    cursor = conn.cursor()
-    
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
     cursor.execute("SELECT * FROM `keyword`")
     rows = cursor.fetchall()
-    conn.close()
+    mydb.close()
     return jsonify({"data": rows})
 
 if __name__ == "__main__":
