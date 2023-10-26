@@ -52,7 +52,7 @@ def clearLen(list):
     for item in list:
         if (len(item) > 1 and len(item) < 6):
             newList.append(item)
-    return json.dumps(newList)
+    return newList
 
 busyList = []
 clearBusy = False
@@ -389,6 +389,10 @@ def recommend():
 def addKeyWord():
     # 获取 JSON 数据
     data = request.json
+    if ('user' not in data):
+        data['user'] = data['source']
+    if ('user' not in data):
+        return jsonify({"err": 1, "msg": "user字段不存在"})
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
