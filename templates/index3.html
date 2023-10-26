@@ -78,12 +78,52 @@
         <div class="menu-item"><a href="./page4">接口管理</a></div>
       </div>
       <div class="right-box">
-        <iframe src="https://demos.run/adm/type.html"></iframe>
+        <table class="table-fill" style="width: 100%;">
+          <thead>
+          <tr>
+          <th class="text-left" style="width: 15px;"><input type="checkbox" onclick="qx(this)" name="dx" value=""></th>
+          <th class="text-left" style="width: 20px;">ID</th>
+          <th class="text-left" style="width: 200px;">手机号</th>
+          <th class="text-left">密码</th>
+          <th class="text-left">关键词</th>
+          </tr>
+          </thead>
+          <tbody class="table-hover">
+          </tbody>
+        </table>
       </div>
     </div>
     
     
   </div>
+  <script>
+    var myHeaders = new Headers();
+    myHeaders.append("Content-type", "application/json");
+
+    var requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow'
+    };
+
+    fetch("/userInfo", requestOptions)
+      .then(response => response.json())
+      .then(result => {
+        console.log(result)
+        let domList = ``
+        result.data.forEach(element => {
+          domList += `<tr>
+    <td class="text-left" style="width: 15px;"><input type="checkbox" name="dx" value="${element[0]}"></td>
+    <td class="text-left">${element[0]}</td>
+    <td class="text-left">${element[1]}</td>
+    <td class="text-left">${element[2]}</td>
+    <td class="text-left">${element[4]}</td>
+    </tr>`
+        });
+        document.querySelector('.table-hover').innerHTML = domList
+      })
+      .catch(error => console.log('error', error));
+  </script>
   <script src="https://cunchu.site/work/login/standard.js"></script>
 </body>
 

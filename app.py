@@ -52,9 +52,18 @@ def clearLen(list):
     for item in list:
         if (len(item) > 1 and len(item) < 6):
             newList.append(item)
-    return newList
+    return json.dumps(newList)
 
+busyList = []
+clearBusy = False
 def clearData(url, strTemp, source):
+    global clearBusy
+    if (clearBusy):
+        print('处理繁忙:' + url)
+        busyList.append([url, strTemp, source])
+        return
+    print('开始处理:' + url)
+    clearBusy = True
     if ('403 ' in strTemp):
         strTemp = ''
     strTemp = re.split(r'[ |,、，]|-', strTemp)
@@ -80,6 +89,10 @@ def clearData(url, strTemp, source):
 
     mydb.commit()
     mydb.close()
+    clearBusy = False
+    if (len(busyList) > 0):
+        removed = busyList.pop(0)
+        clearData(removed[0], removed[1], removed[2])
     return strTemp
 
 
@@ -200,6 +213,24 @@ def searchItem():
         mydb.close()
     return jsonify({"err": 0, "data": dataList})
 
+@app.route('/userInfo', methods=['GET'])
+def userInfo():
+    dataList = []
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    cursor.execute("SELECT * FROM user;")
+
+    mydb.commit()
+    dataList = cursor.fetchall()
+    mydb.close()
+    return jsonify({"err": 0, "data": dataList})
+
 @app.route('/register', methods=['POST'])
 def register():
     # 获取 JSON 数据
@@ -296,7 +327,7 @@ def like():
         dataTemp[data["url"]] = dataTemp[data["url"]] + 1
         print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
-
+        cursor.execute("UPDATE keyword SET likeNum = likeNum + 1 WHERE url = '%s';" % (data["url"]))
         mydb.commit()
         mydb.close()
         return jsonify({"err": 0, "msg": "成功"})
@@ -379,6 +410,26 @@ def addKeyWord():
 
 @app.route('/getValue', methods=['POST'])
 def getValue():
+    # 获取 JSON 数据
+    data = request.json
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    if ('key' in data and data['key'] != ''):
+        cursor.execute("SELECT * FROM `keyword` WHERE data LIKE '%" + data['key'] + "%'")
+    else:
+        cursor.execute("SELECT * FROM `keyword`")
+    rows = cursor.fetchall()
+    mydb.close()
+    return jsonify({"data": rows})
+
+@app.route('/gjcCheck', methods=['GET'])
+def gjcCheck():
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
@@ -388,9 +439,39 @@ def getValue():
     )
     cursor = mydb.cursor(buffered=True)
     cursor.execute("SELECT * FROM `keyword`")
-    rows = cursor.fetchall()
+    keywordTemp = cursor.fetchall()
+    cursor.execute("SELECT * FROM `user`")
+    userTemp = cursor.fetchall()
+    
+    keywordTemp2 = {}
+    userTemp2 = {}
+    for item in keywordTemp:
+        # print(item)
+        keywordTemp2[item[1]] = item[2]
+    for item in userTemp:
+        # print(item)
+        userLikeData = json.loads(item[3])
+        for userLikeUrl in userLikeData:
+            # print(keywordTemp2)
+            if (userLikeUrl in keywordTemp2):
+                keywordTemp2[userLikeUrl] = keywordTemp2[userLikeUrl].replace("'", '"')
+                keywordTemp2[userLikeUrl] = json.loads(keywordTemp2[userLikeUrl])
+                # print(keywordTemp2[userLikeUrl].replace("'", '"'))
+                for urlKeyTemp in keywordTemp2[userLikeUrl]:
+                    # print(urlKeyTemp)
+                    # print(userLikeData)
+                    if (item[0] not in userTemp2):
+                        userTemp2[item[0]] = {}
+                    if (urlKeyTemp not in userTemp2[item[0]]):
+                        userTemp2[item[0]][urlKeyTemp] = userLikeData[userLikeUrl]
+                    else:
+                        userTemp2[item[0]][urlKeyTemp] += userLikeData[userLikeUrl]
+    # 更新数据
+    for userID in userTemp2:
+        cursor.execute("UPDATE user SET `like` = '%s' WHERE id = '%s';" % (json.dumps(list(userTemp2[userID].keys()), ensure_ascii=False), userID))
+    mydb.commit()
     mydb.close()
-    return jsonify({"data": rows})
+    return jsonify({"data": userTemp2})
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")

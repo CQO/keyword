@@ -74,7 +74,7 @@
           <div class="owo button-bar">
             <input type="text" id="gjc" placeholder="关键词" style=" width: 200px; margin: 10px; ">
             <input type="text" id="wz" placeholder="网址" style=" width: 200px; margin: 10px; ">
-            <!-- <div class="owo button">查询</div> -->
+            <div class="owo button" onclick="chaxun()">查询</div>
             <div class="owo button" onclick="tianjia()">添加</div>
           </div>
           <table class="table-fill" style="width: 100%;">
@@ -85,7 +85,7 @@
             <th class="text-left" style="width: 200px;">网站地址</th>
             <th class="text-left">关键词</th>
             <th class="text-left">来源</th>
-            <th class="text-left">喜欢数量</th>
+            <th class="text-left" style="width: 40px;">喜欢</th>
             <th class="text-left">添加时间</th>
             <th class="text-left" style="width: 90px;">操作</th>
             </tr>
@@ -130,7 +130,7 @@
         .catch(error => console.log('error', error));
       console.log(tempList)
     }
-    function getValue () {
+    function getValue (searchKey) {
       window.infoData = {}
       var myHeaders = new Headers();
       myHeaders.append("Content-Type", "application/json");
@@ -138,7 +138,10 @@
       var requestOptions = {
         method: 'POST',
         headers: myHeaders,
-        redirect: 'follow'
+        redirect: 'follow',
+        body: JSON.stringify({
+          key: searchKey
+        })
       };
 
       fetch("/getValue", requestOptions)
@@ -164,6 +167,9 @@
         .catch(error => console.log('error', error));
     }
     getValue()
+    function chaxun (searchKey) {
+      getValue(window.gjc.value)
+    }
     function deleteItem (url) {
       var myHeaders = new Headers();
       myHeaders.append("Content-Type", "application/json");
