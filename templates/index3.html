@@ -74,7 +74,7 @@
       <div class="lf-box">
         <div class="menu-item cative"><a href="./page3">用户管理</a></div>
         <div class="menu-item"><a href="./">关键词检查</a></div>
-        <div class="menu-item"><a href="./page2">关键词管理</a></div>
+        <div class="menu-item"><a href="./page2">网址管理</a></div>
         <div class="menu-item"><a href="./page4">接口管理</a></div>
       </div>
       <div class="right-box">
@@ -84,7 +84,7 @@
           <th class="text-left" style="width: 15px;"><input type="checkbox" onclick="qx(this)" name="dx" value=""></th>
           <th class="text-left" style="width: 20px;">ID</th>
           <th class="text-left" style="width: 200px;">手机号</th>
-          <th class="text-left">密码</th>
+          <th class="text-left">登录时间</th>
           <th class="text-left">关键词</th>
           </tr>
           </thead>
@@ -116,7 +116,7 @@
     <td class="text-left" style="width: 15px;"><input type="checkbox" name="dx" value="${element[0]}"></td>
     <td class="text-left">${element[0]}</td>
     <td class="text-left">${element[1]}</td>
-    <td class="text-left">${element[2]}</td>
+    <td class="text-left">${new Date(element[5] * 1000).toLocaleString()}</td>
     <td class="text-left">${element[4]}</td>
     </tr>`
         });
