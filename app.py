@@ -273,7 +273,7 @@ def sendSMS():
         mydb.commit()
         mydb.close()
     else:
-        cursor.execute("INSERT INTO user (username, password, data) VALUES ('%s', '%s', '{}')" % (data["username"], str(yzm)))
+        cursor.execute("INSERT INTO user (username, password, data, loginTime, like) VALUES ('%s', '%s', '{}', '%s', '[]')" % (data["username"], str(yzm)), int(time.time()))
         mydb.commit()
         mydb.close()
     sendSMSTo(str(yzm), data["username"])
