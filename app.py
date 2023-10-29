@@ -52,7 +52,7 @@ def clearLen(list):
     for item in list:
         if (len(item) > 1 and len(item) < 6):
             newList.append(item)
-    return json.dumps(newList)
+    return newList
 
 busyList = []
 clearBusy = False
@@ -150,9 +150,10 @@ def checkDom(url, source):
 
 @app.route('/webSite', methods=['POST'])
 def webSite():
+    global clearBusy
     # 获取 JSON 数据
     data = request.json
-
+    clearBusy = False   
     # 对于本示例，我们只是将接收到的数据返回为 JSON 响应
     for key in data['urlList']:
         if (key.startswith("http")):
@@ -273,11 +274,11 @@ def sendSMS():
     yzm = int(random.uniform(1000, 9999))
     if (dataTemp):
         # 有的话直接发短信更新
-        cursor.execute("UPDATE user SET password = '%s' WHERE username = '%s';" % (str(yzm), data["username"]))
+        cursor.execute("UPDATE user SET password = '%s', loginTime = '%s' WHERE username = '%s';" % (str(yzm), int(time.time()), data["username"]))
         mydb.commit()
         mydb.close()
     else:
-        cursor.execute("INSERT INTO user (username, password, data) VALUES ('%s', '%s', '{}')" % (data["username"], str(yzm)))
+        cursor.execute("INSERT INTO user (username, password, data, loginTime, like) VALUES ('%s', '%s', '{}', '%s', '[]')" % (data["username"],str(yzm), int(time.time())))
         mydb.commit()
         mydb.close()
     sendSMSTo(str(yzm), data["username"])
@@ -394,6 +395,11 @@ def recommend():
 def addKeyWord():
     # 获取 JSON 数据
     data = request.json
+    if ('user' not in data):
+        if ('source' in data):
+            data['user'] = data['source']
+    if ('user' not in data):
+        return jsonify({"err": 1, "msg": "user字段不存在"})
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
