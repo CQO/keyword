@@ -95,8 +95,13 @@ def clearData(url, strTemp, source):
         clearData(removed[0], removed[1], removed[2])
     return strTemp
 
-
+# 这个变量防止重复
+hideURLList = []
 def checkDom(url, source):
+    global hideURLList
+    if (url in hideURLList):
+        return
+    hideURLList.append(url)
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
