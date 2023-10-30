@@ -130,7 +130,7 @@
         .catch(error => console.log('error', error));
       console.log(tempList)
     }
-    function getValue (searchKey) {
+    function getValue (searchKey, wz) {
       window.infoData = {}
       var myHeaders = new Headers();
       myHeaders.append("Content-Type", "application/json");
@@ -140,7 +140,8 @@
         headers: myHeaders,
         redirect: 'follow',
         body: JSON.stringify({
-          key: searchKey
+          key: searchKey,
+          url: wz
         })
       };
 
@@ -168,7 +169,7 @@
     }
     getValue()
     function chaxun (searchKey) {
-      getValue(window.gjc.value)
+      getValue(window.gjc.value, window.wz.value)
     }
     function deleteItem (url) {
       var myHeaders = new Headers();

@@ -432,7 +432,10 @@ def getValue():
     )
     cursor = mydb.cursor(buffered=True)
     if ('key' in data and data['key'] != ''):
-        cursor.execute("SELECT * FROM `keyword` WHERE data LIKE '%" + data['key'] + "%'")
+        if ('url' in data and data['url'] != ''):
+            cursor.execute("SELECT * FROM `keyword` WHERE url LIKE '%" + data['url'] + "%'")
+        else:
+            cursor.execute("SELECT * FROM `keyword` WHERE data LIKE '%" + data['key'] + "%'")
     else:
         cursor.execute("SELECT * FROM `keyword`")
     rows = cursor.fetchall()
