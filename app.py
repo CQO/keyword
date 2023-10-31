@@ -50,13 +50,14 @@ def sendSMSTo(yzm, phone):
 def clearLen(list):
     newList = []
     for item in list:
-        if (len(item) > 1 and len(item) < 6):
+        if (len(item) > 1 and len(item) < 600):
             newList.append(item)
     return newList
 
 busyList = []
 clearBusy = False
 def clearData(url, strTemp, source):
+    global busyList
     global clearBusy
     if (clearBusy):
         print('处理繁忙:' + url)
@@ -71,7 +72,7 @@ def clearData(url, strTemp, source):
     strTemp = [x for x in strTemp if x != ""]
     # 分词
     for key in strTemp:
-        if (len(key) > 6):
+        if (len(key) > 600):
             response = requests.request("GET", "https://api.pearktrue.cn/api/fenci/?word=" + key, headers={}, data={})
             fcData =  json.loads(response.text)
             strTemp = strTemp + fcData["data"]
@@ -128,6 +129,12 @@ def checkDom(url, source):
         # 指定编码为 'utf-8'（你可以根据需要更改为其他编码）
         response.encoding = 'utf-8'
         domStr = response.text
+        # 判断是否需要编码转换
+        if ('charset=gb2312"' in domStr):
+            response = requests.request("GET", url, headers=headers, data=payload)
+            response.raise_for_status()
+            response.encoding = 'gb2312'
+            domStr = response.text
         soup = BeautifulSoup(domStr, 'html.parser')
         matchTemp = soup.find('meta', {'name': 'keywords'})
         if (matchTemp and matchTemp.get('content')):
@@ -241,6 +248,10 @@ def userInfo():
 def register():
     # 获取 JSON 数据
     data = request.json
+    if (data["username"] == ''):
+        return jsonify({"err": 1, "msg": "用户名不能为空!"})
+    if (data["password"] == ''):
+        return jsonify({"err": 1, "msg": "密码不能为空!"})
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
@@ -278,7 +289,7 @@ def sendSMS():
         mydb.commit()
         mydb.close()
     else:
-        cursor.execute("INSERT INTO user (username, password, data, loginTime, like) VALUES ('%s', '%s', '{}', '%s', '[]')" % (data["username"],str(yzm), int(time.time())))
+        cursor.execute("INSERT INTO user (username, password, data, loginTime, `like`) VALUES ('%s', '%s', '{}', '%s', '[]')" % (data["username"],str(yzm), int(time.time())))
         mydb.commit()
         mydb.close()
     sendSMSTo(str(yzm), data["username"])
@@ -302,6 +313,8 @@ def login():
     dataTemp = cursor.fetchone()
     mydb.close()
     if dataTemp:
+        if (int(time.time()) - int(dataTemp[5]) > 300):
+            return jsonify({"err": 1, "msg": "验证码过期!"})
         return jsonify({"err": 0, "msg": "登录成功!", "data": dataTemp})
     else:
         return jsonify({"err": 1, "msg": "用户名或密码错误!"})
@@ -310,6 +323,10 @@ def login():
 def like():
     # 获取 JSON 数据
     data = request.json
+    if ('username' not in data):
+        return jsonify({"err": 1, "msg": "缺少username字段!"})
+    if ('url' not in data):
+        return jsonify({"err": 1, "msg": "缺少url字段!"})
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
@@ -345,6 +362,10 @@ def like():
 def unLike():
     # 获取 JSON 数据
     data = request.json
+    if ('username' not in data):
+        return jsonify({"err": 1, "msg": "缺少username字段!"})
+    if ('url' not in data):
+        return jsonify({"err": 1, "msg": "缺少url字段!"})
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
@@ -386,10 +407,19 @@ def recommend():
         database="keyword"  # 数据库名称，可选
     )
     cursor = mydb.cursor(buffered=True)
-    cursor.execute("SELECT * FROM `keyword`")
+    cursor.execute("SELECT * FROM `keyword`;")
     rows = cursor.fetchall()
+    # 先获取用户数据
+    userName = request.args.get('user')
+    cursor.execute("SELECT * FROM `user` WHERE username = '%s';" % (userName))
+    userInfo = cursor.fetchone()
     mydb.close()
-    return jsonify({"err": 0, "data": rows[int(random.uniform(0, len(rows) - 1))]})
+    if (userInfo):
+        print(userInfo[3])
+        returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+        return jsonify({"err": 0, "data": returnItem, "like": returnItem[1] in userInfo[3]})
+    else:
+        return jsonify({"err": 1, "data": "用户不存在!"})
 
 @app.route('/addKeyWord', methods=['POST'])
 def addKeyWord():
@@ -407,6 +437,7 @@ def addKeyWord():
         password="mmit7750", # 数据库密码
         database="keyword"  # 数据库名称，可选
     )
+    
     cursor = mydb.cursor(buffered=True)
     for item in data["list"]:
         cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
@@ -432,12 +463,12 @@ def getValue():
     )
     cursor = mydb.cursor(buffered=True)
     if ('key' in data and data['key'] != ''):
+        cursor.execute("SELECT * FROM `keyword` WHERE data LIKE '%" + data['key'] + "%'")
+    else:
         if ('url' in data and data['url'] != ''):
             cursor.execute("SELECT * FROM `keyword` WHERE url LIKE '%" + data['url'] + "%'")
         else:
-            cursor.execute("SELECT * FROM `keyword` WHERE data LIKE '%" + data['key'] + "%'")
-    else:
-        cursor.execute("SELECT * FROM `keyword`")
+            cursor.execute("SELECT * FROM `keyword`")
     rows = cursor.fetchall()
     mydb.close()
     return jsonify({"data": rows})
