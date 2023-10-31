@@ -468,8 +468,10 @@ def gjcCheck():
         for userLikeUrl in userLikeData:
             # print(keywordTemp2)
             if (userLikeUrl in keywordTemp2):
-                keywordTemp2[userLikeUrl] = keywordTemp2[userLikeUrl].replace("'", '"')
-                keywordTemp2[userLikeUrl] = json.loads(keywordTemp2[userLikeUrl])
+                print(keywordTemp2[userLikeUrl])
+                if (isinstance(keywordTemp2[userLikeUrl], str)):
+                    keywordTemp2[userLikeUrl] = keywordTemp2[userLikeUrl].replace("'", '"')
+                    keywordTemp2[userLikeUrl] = json.loads(keywordTemp2[userLikeUrl])
                 # print(keywordTemp2[userLikeUrl].replace("'", '"'))
                 for urlKeyTemp in keywordTemp2[userLikeUrl]:
                     # print(urlKeyTemp)
