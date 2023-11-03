@@ -345,7 +345,7 @@ def like():
         dataTemp = json.loads(dataTemp[0])
         
         if (data["url"] not in dataTemp):
-            dataTemp[data["url"]] = 1
+            dataTemp[data["url"]] = 0
             
         dataTemp[data["url"]] = dataTemp[data["url"]] + 1
         print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
@@ -439,6 +439,17 @@ def addKeyWord():
     )
     
     cursor = mydb.cursor(buffered=True)
+    # 添加喜欢
+    cursor.execute("SELECT data FROM user WHERE username = '" + data["username"] + "';")
+
+    mydb.commit()
+    dataTemp = cursor.fetchone()
+    if (data["url"] not in dataTemp):
+        dataTemp[data["url"]] = 0
+            
+    dataTemp[data["url"]] = dataTemp[data["url"]] + 2
+    cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
+    mydb.commit()
     for item in data["list"]:
         cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
         rows = cursor.fetchone()
