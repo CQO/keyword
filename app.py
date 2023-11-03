@@ -8,14 +8,6 @@ from flask_cors import CORS
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, jsonify
 
-# 创建连接
-mydb = mysql.connector.connect(
-  host="logs.lamp.run",          # 数据库主机地址
-  user="root",     # 数据库用户名
-  password="mmit7750", # 数据库密码
-  database="keyword"  # 数据库名称，可选
-)
-
 app = Flask(__name__)
 CORS(app)  # 默认允许所有域名进行跨域请求
 
@@ -67,7 +59,9 @@ def clearData(url, strTemp, source):
     clearBusy = True
     if ('403 ' in strTemp):
         strTemp = ''
-    strTemp = re.split(r'[ |,、，]|-', strTemp)
+    strTemp = strTemp.replace("'", " ")
+    strTemp = strTemp.replace('"', " ")
+    strTemp = re.split(r'[ |,、，#]|-', strTemp)
     # 清理空
     strTemp = [x for x in strTemp if x != ""]
     # 分词
@@ -85,8 +79,9 @@ def clearData(url, strTemp, source):
     )
     cursor = mydb.cursor(buffered=True)
     strTemp = clearLen(strTemp)
-    print(strTemp)
-    cursor.execute("INSERT INTO `keyword` (url, data, source, likeNum, time) VALUES ('%s', \"%s\", '%s', '0', '%s')" % (url, strTemp, source, int(time.time())))
+    sqlTemp = "INSERT IGNORE INTO `keyword` (url, data, source, likeNum, time) VALUES ('%s', \"%s\", '%s', '0', '%s')" % (url, strTemp, source, int(time.time()))
+    print(sqlTemp)
+    cursor.execute(sqlTemp)
 
     mydb.commit()
     mydb.close()
@@ -451,12 +446,13 @@ def addKeyWord():
     cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
     mydb.commit()
     for item in data["list"]:
-        cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
-        rows = cursor.fetchone()
+        # cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
+        # rows = cursor.fetchone()
         
-        if (not rows):
+        # if (not rows):
+        if ("matchTemp" in item and "url" in item):
             clearData(item["url"], item["matchTemp"], data["user"])
-    mydb.close()
+    # mydb.close()
     return jsonify({"err": 0, "msg": "操作已提交"})
 
 
@@ -526,10 +522,14 @@ def gjcCheck():
                         userTemp2[item[0]][urlKeyTemp] += userLikeData[userLikeUrl]
     # 更新数据
     for userID in userTemp2:
-        cursor.execute("UPDATE user SET `like` = '%s' WHERE id = '%s';" % (json.dumps(list(userTemp2[userID].keys()), ensure_ascii=False), userID))
+        # 根据字典的值进行排序（降序），并提取前十个条目
+        temp = sorted(userTemp2[userID].items(), key=lambda x: x[1], reverse=True)[:10]
+        # temp = list(userTemp2[userID].keys())
+        # temp = temp[0:10]
+        cursor.execute("UPDATE user SET `like` = '%s' WHERE id = '%s';" % (json.dumps(temp, ensure_ascii=False), userID))
     mydb.commit()
     mydb.close()
-    return jsonify({"data": userTemp2})
+    return jsonify({"err": 0})
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")
