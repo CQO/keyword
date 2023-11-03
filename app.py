@@ -391,8 +391,10 @@ def unLike():
         mydb.close()
         return jsonify({"err": 1, "msg": "用户名或密码错误!"})
 
+useRecommendTemp = {}
 @app.route('/recommend', methods=['GET'])
 def recommend():
+    global useRecommendTemp
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
@@ -408,9 +410,16 @@ def recommend():
     cursor.execute("SELECT * FROM `user` WHERE username = '%s';" % (userName))
     userInfo = cursor.fetchone()
     mydb.close()
+    if (len(rows) < 1):
+        return jsonify({"err": 1, "data": "网址数量不足!"})
     if (userInfo):
         print(userInfo[3])
         returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+        if (userName not in useRecommendTemp):
+            useRecommendTemp[userName] = []
+        if (returnItem[1] in useRecommendTemp[userName]):
+            returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+        useRecommendTemp[userName].append(useRecommendTemp[userName])
         return jsonify({"err": 0, "data": returnItem, "like": returnItem[1] in userInfo[3]})
     else:
         return jsonify({"err": 1, "data": "用户不存在!"})
