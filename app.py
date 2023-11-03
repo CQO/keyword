@@ -61,7 +61,7 @@ def clearData(url, strTemp, source):
         strTemp = ''
     strTemp = strTemp.replace("'", " ")
     strTemp = strTemp.replace('"', " ")
-    strTemp = re.split(r'[ |,、，#]|-', strTemp)
+    strTemp = re.split(r'[ |,、，#@]|-', strTemp)
     # 清理空
     strTemp = [x for x in strTemp if x != ""]
     # 分词
@@ -340,7 +340,7 @@ def like():
         dataTemp = json.loads(dataTemp[0])
         
         if (data["url"] not in dataTemp):
-            dataTemp[data["url"]] = 0
+            dataTemp[data["url"]] = 1
             
         dataTemp[data["url"]] = dataTemp[data["url"]] + 1
         print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
@@ -391,7 +391,6 @@ def unLike():
         mydb.close()
         return jsonify({"err": 1, "msg": "用户名或密码错误!"})
 
-
 @app.route('/recommend', methods=['GET'])
 def recommend():
     # 创建连接
@@ -416,6 +415,29 @@ def recommend():
     else:
         return jsonify({"err": 1, "data": "用户不存在!"})
 
+@app.route('/checkLike', methods=['POST'])
+def checkLike():
+    # 获取 JSON 数据
+    data = request.json
+    if ('user' not in data):
+        return jsonify({"err": 1, "msg": "user字段不存在"})
+    if ('url' not in data):
+        return jsonify({"err": 1, "msg": "url字段不存在"})
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    # 先获取用户数据
+    userName = request.args.get('user')
+    cursor.execute("SELECT * FROM `user` WHERE username = '%s';" % (data['user']))
+    userInfo = cursor.fetchone()
+    mydb.close()
+    return jsonify({"err": 0, "like": data['url'] in userInfo[3]})
+
 @app.route('/addKeyWord', methods=['POST'])
 def addKeyWord():
     # 获取 JSON 数据
@@ -426,25 +448,14 @@ def addKeyWord():
     if ('user' not in data):
         return jsonify({"err": 1, "msg": "user字段不存在"})
     # 创建连接
-    mydb = mysql.connector.connect(
-        host="logs.lamp.run",          # 数据库主机地址
-        user="root",     # 数据库用户名
-        password="mmit7750", # 数据库密码
-        database="keyword"  # 数据库名称，可选
-    )
+    # mydb = mysql.connector.connect(
+    #     host="logs.lamp.run",          # 数据库主机地址
+    #     user="root",     # 数据库用户名
+    #     password="mmit7750", # 数据库密码
+    #     database="keyword"  # 数据库名称，可选
+    # )
     
-    cursor = mydb.cursor(buffered=True)
-    # 添加喜欢
-    cursor.execute("SELECT data FROM user WHERE username = '" + data["username"] + "';")
-
-    mydb.commit()
-    dataTemp = cursor.fetchone()
-    if (data["url"] not in dataTemp):
-        dataTemp[data["url"]] = 0
-            
-    dataTemp[data["url"]] = dataTemp[data["url"]] + 2
-    cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
-    mydb.commit()
+    # cursor = mydb.cursor(buffered=True)
     for item in data["list"]:
         # cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
         # rows = cursor.fetchone()
