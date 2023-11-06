@@ -5,8 +5,8 @@ import mysql.connector
 
 scheduler = sched.scheduler(time.time, time.sleep)
 
-def your_method(sc): 
-    # 这里写你想要执行的代码
+def runJob():
+# 这里写你想要执行的代码
     print("执行了方法")
     # 创建连接
     mydb = mysql.connector.connect(
@@ -55,6 +55,9 @@ def your_method(sc):
         cursor.execute("UPDATE user SET `like` = '%s' WHERE id = '%s';" % (json.dumps(temp, ensure_ascii=False), userID))
     mydb.commit()
     mydb.close()
+runJob()
+def your_method(sc): 
+    runJob()
     # 再次调度这个方法，10分钟后再次运行
     sc.enter(600, 1, your_method, (sc,))
 
