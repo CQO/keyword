@@ -18,6 +18,8 @@
   <!--360 使用Google Chrome Frame-->
   <meta name="renderer" content="webkit">
   <link charset="utf-8"  rel="stylesheet" href="https://cunchu.site/work/login/standard.css">
+  <link type="text/css" rel="stylesheet" href="https://cunchu.site/work/script/simplePagination.css"/>
+  <link charset="utf-8" rel="stylesheet" href="https://cunchu.site/work/login/mini.css">
   <style>
     .owo td {
       word-break: break-all;
@@ -93,6 +95,7 @@
             <tbody class="table-hover">
             </tbody>
           </table>
+          <div class="pagg"></div>
           <div class="owo button-bar" style=" padding: 0; ">
             <div class="owo button" onclick="deleteMore()">批量删除</div>
           </div>
@@ -103,7 +106,16 @@
     
     
   </div>
+ 
   <script>
+    window.owoType = '关键词管理'
+  </script>
+  <script src="https://cunchu.site/work/login/mini.js" type="text/javascript" charset="UTF-8"></script>
+  <script type="text/javascript" src="https://cunchu.site/ozzx/script/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cunchu.site/ozzx/script/jquery.simplePagination.js"></script>
+  <script>
+    window.pageNum = 1
+    
     function check() {
       let tempList = document.querySelector('textarea').value
       tempList = tempList.split('\n')
@@ -132,6 +144,7 @@
     }
     function getValue (searchKey, wz) {
       window.infoData = {}
+      window.infoData2 = {}
       var myHeaders = new Headers();
       myHeaders.append("Content-Type", "application/json");
 
@@ -141,7 +154,8 @@
         redirect: 'follow',
         body: JSON.stringify({
           key: searchKey,
-          url: wz
+          url: wz,
+          "page": window.pageNum
         })
       };
 
@@ -149,9 +163,22 @@
         .then(response => response.json())
         .then(result => {
           console.log(result)
+          if (result.num) {
+            $(".pagg").pagination({
+                items: result.num,
+                itemsOnPage: 20,
+                cssStyle: 'light-theme',
+                onPageClick: function (e) {
+                  console.log(e)
+                  window.pageNum = e
+                  getValue()
+                }
+            });
+          }
           let domList = ``
           result.data.forEach(element => {
             window.infoData[element[0]] = element[1]
+            window.infoData2[element[0]] = element[2]
             domList += `<tr>
       <td class="text-left" style="width: 15px;"><input type="checkbox" name="dx" value="${element[0]}"></td>
       <td class="text-left">${element[0]}</td>
@@ -194,6 +221,7 @@
         .catch(error => console.log('error', error));
     }
     function editItem(key) {
+      window.infoData2[key] = window.infoData2[key].replaceAll("'", '"')
       owo.tool.prompt('请输入新的关键词:', (val) => {
         console.log(val)
         var myHeaders = new Headers();
@@ -201,7 +229,7 @@
 
         var raw = JSON.stringify({
           "url": key,
-          "keyword": val
+          "keyword": val.split('\n')
         });
 
         var requestOptions = {
@@ -216,7 +244,7 @@
           getValue()
         })
         .catch(error => console.log('error', error));
-      }, window.infoData[key])
+      }, JSON.parse(window.infoData2[key]).join('\n'))
     }
     function qx (dom) {
       document.querySelectorAll('[name="dx"]').forEach(element => {

@@ -193,7 +193,10 @@ def updataItem():
         database="keyword"  # 数据库名称，可选
     )
     cursor = mydb.cursor(buffered=True)
-    cursor.execute("UPDATE keyword SET keyword = '?' WHERE url = '?';", (data["keyword"], data["url"]))
+    data["keyword"] = json.dumps(data["keyword"], ensure_ascii=False)
+    sqlTemp = "UPDATE `keyword` SET data = '%s' WHERE id = '%s';" % (data["keyword"], data["url"])
+    print(sqlTemp)
+    cursor.execute(sqlTemp)
 
     mydb.commit()
     mydb.close()
@@ -430,6 +433,10 @@ def recommend():
                         returnItem = rows[int(random.uniform(0, len(rows) - 1))]
         if (userName not in useRecommendTemp):
             useRecommendTemp[userName] = []
+        # 第一次随机推
+        if (returnItem[1] in useRecommendTemp[userName]):
+            returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+        # 第二次随机推
         if (returnItem[1] in useRecommendTemp[userName]):
             returnItem = rows[int(random.uniform(0, len(rows) - 1))]
         useRecommendTemp[userName].append(useRecommendTemp[userName])
@@ -503,6 +510,9 @@ def addKeyWord():
 def getValue():
     # 获取 JSON 数据
     data = request.json
+    print(data["page"])
+    if ("page" not in data):
+        data["page"] = 1
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
@@ -517,10 +527,16 @@ def getValue():
         if ('url' in data and data['url'] != ''):
             cursor.execute("SELECT * FROM `keyword` WHERE url LIKE '%" + data['url'] + "%'")
         else:
-            cursor.execute("SELECT * FROM `keyword`")
+            cursor.execute("SELECT * FROM `keyword` LIMIT 20 OFFSET " + str((int(data["page"]) - 1) * 20))
     rows = cursor.fetchall()
-    mydb.close()
-    return jsonify({"data": rows})
+    if (int(data["page"]) == 1):
+        cursor.execute("SELECT COUNT(*) FROM `keyword`;")
+        contNum = cursor.fetchone()
+        mydb.close()
+        return jsonify({"data": rows, "num": contNum[0]})
+    else:
+        mydb.close()
+        return jsonify({"data": rows})
 
 @app.route('/gjcCheck', methods=['GET'])
 def gjcCheck():
