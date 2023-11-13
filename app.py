@@ -419,7 +419,7 @@ def recommend():
         print(userInfo[3])
         returnItem = rows[int(random.uniform(0, len(rows) - 1))]
         # 找到他喜欢的
-        if (int(random.uniform(1000, 9999)) < 3000):
+        if (int(random.uniform(1000, 9999)) < 6000):
             # 随机选一个他喜欢的分类
             if (len(userInfo[4]) > 0):
                 if (isinstance(userInfo[4], str)):
