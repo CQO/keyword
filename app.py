@@ -319,7 +319,7 @@ def sendSMS():
 
     mydb.commit()
     dataTemp = cursor.fetchone()
-    yzm = int(random.uniform(1000, 9999))
+    yzm = round(random.uniform(1000, 9999))
     if (dataTemp):
         # 有的话直接发短信更新
         cursor.execute("UPDATE user SET password = '%s', loginTime = '%s' WHERE username = '%s';" % (str(yzm), int(time.time()), data["username"]))
@@ -382,11 +382,10 @@ def like():
         dataTemp = json.loads(dataTemp[0])
         
         if (data["url"] not in dataTemp):
-            dataTemp[data["url"]] = 0
+            dataTemp[data["url"]] = 1
         else:
             mydb.close()
             return jsonify({"err": 1, "msg": "一个网站只能喜欢一次!"})
-        dataTemp[data["url"]] = dataTemp[data["url"]] + 1
         print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE keyword SET likeNum = likeNum + 1 WHERE url = '%s';" % (data["url"]))
@@ -421,17 +420,13 @@ def unLike():
     if dataTemp:
         dataTemp = json.loads(dataTemp[0])
         
-        if (data["url"] not in dataTemp):
-            dataTemp[data["url"]] = 0
-        else:
-            mydb.close()
-            return jsonify({"err": 1, "msg": "一个网站只能喜欢一次!"})    
-        dataTemp[data["url"]] = dataTemp[data["url"]] - 1
-        print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
-        cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
+        if (data["url"] in dataTemp):
+            del dataTemp[data["url"]]
+            print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
+            cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
 
-        mydb.commit()
-        mydb.close()
+            mydb.commit()
+            mydb.close()
         return jsonify({"err": 0, "msg": "成功"})
     else:
         mydb.close()
@@ -459,36 +454,39 @@ def recommend():
     if (len(rows) < 1):
         return jsonify({"err": 1, "data": "网址数量不足!"})
     if (userInfo):
-        print(userInfo[3])
-        returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+        randNum = round(random.uniform(1000, 9999))
+        returnItem = rows[round(random.uniform(0, len(rows) - 1))]
         # 推送热门的
-        if (int(random.uniform(1000, 9999)) < 1000):
+        if (randNum < 3000):
             cursor.execute("SELECT * FROM `keyword` ORDER BY likeNum DESC LIMIT 50;")
             rows = cursor.fetchall()
             if (len(rows) > 0):
-                returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+                returnItem = rows[round(random.uniform(0, len(rows) - 1))]
                     
         # 找到他喜欢的
-        if (int(random.uniform(1000, 9999)) < 6000):
+        if (randNum >= 3000 and randNum < 9000):
             # 随机选一个他喜欢的分类
             if (len(userInfo[4]) > 0):
                 if (isinstance(userInfo[4], str)):
                     tempObj = userInfo[4].replace("'", '"')
                     tempObj = json.loads(tempObj)
                     print(tempObj)
-                    likeStr = tempObj[int(random.uniform(0, len(tempObj) - 1))]
+                    likeStr = tempObj[round(random.uniform(0, len(tempObj) - 1))]
                     cursor.execute("SELECT * FROM `keyword` WHERE data LIKE '%" + likeStr[0] + "%';")
                     rows = cursor.fetchall()
                     if (len(rows) > 0):
-                        returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+                        returnItem = rows[round(random.uniform(0, len(rows) - 1))]
         if (userName not in useRecommendTemp):
             useRecommendTemp[userName] = []
         # 第一次随机推
         if (returnItem[1] in useRecommendTemp[userName]):
-            returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+            returnItem = rows[round(random.uniform(0, len(rows) - 1))]
         # 第二次随机推
         if (returnItem[1] in useRecommendTemp[userName]):
-            returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+            returnItem = rows[round(random.uniform(0, len(rows) - 1))]
+        # 第三次次随机推
+        if (returnItem[1] in useRecommendTemp[userName]):
+            returnItem = rows[round(random.uniform(0, len(rows) - 1))]
         useRecommendTemp[userName].append(useRecommendTemp[userName])
         mydb.close()
         return jsonify({"err": 0, "data": returnItem, "like": returnItem[1] in userInfo[3]})
@@ -535,7 +533,7 @@ def addKeyWord():
             data['user'] = data['source']
     if ('user' not in data):
         return jsonify({"err": 1, "msg": "user字段不存在"})
-    # 创建连接
+    # # 创建连接
     # mydb = mysql.connector.connect(
     #     host="logs.lamp.run",          # 数据库主机地址
     #     user="root",     # 数据库用户名
@@ -544,6 +542,17 @@ def addKeyWord():
     # )
     
     # cursor = mydb.cursor(buffered=True)
+    # # 添加喜欢
+    # cursor.execute("SELECT data FROM user WHERE username = '" + data["user"] + "';")
+
+    # mydb.commit()
+    # dataTemp = cursor.fetchone()
+    # if (data["url"] not in dataTemp):
+    #     dataTemp[data["url"]] = 0
+            
+    # dataTemp[data["url"]] = dataTemp[data["url"]] + 2
+    # cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["user"]))
+    # mydb.commit()
     for item in data["list"]:
         # cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
         # rows = cursor.fetchone()
