@@ -63,33 +63,29 @@
 </head>
 <body>
   <div class="box owo">
-    <nav class="owo"><h2>关键词后台管理</h2></nav>
+    <nav class="owo"><h2>标签管理</h2></nav>
     <div class="fr-box">
       <div class="lf-box">
         <div class="menu-item"><a href="./page3">用户管理</a></div>
         <div class="menu-item"><a href="./">网址添加</a></div>
-        <div class="menu-item cative"><a href="./page2">网址管理</a></div>
-        <div class="menu-item"><a href="./page4">域名标签</a></div>
+        <div class="menu-item"><a href="./page2">网址管理</a></div>
+        <div class="menu-item cative"><a href="./page4">域名标签</a></div>
       </div>
       <div class="right-box">
         <div class="panel">
-          <div class="owo button-bar">
+          <!-- <div class="owo button-bar">
             <input type="text" id="gjc" placeholder="关键词" style=" width: 200px; margin: 10px; ">
             <input type="text" id="wz" placeholder="网址" style=" width: 200px; margin: 10px; ">
             <div class="owo button" onclick="chaxun()">查询</div>
-            <!-- <div class="owo button" onclick="tianjia()">添加</div> -->
-          </div>
+            <div class="owo button" onclick="tianjia()">添加</div>
+          </div> -->
           <table class="table-fill" style="width: 100%;">
             <thead>
             <tr>
             <th class="text-left" style="width: 15px;"><input type="checkbox" onclick="qx(this)" name="dx" value=""></th>
             <th class="text-left" style="width: 30px;">ID</th>
             <th class="text-left" style="width: 200px;">网站地址</th>
-            <th class="text-left">关键词</th>
             <th class="text-left">标签</th>
-            <th class="text-left" style="width: 100px;">来源</th>
-            <th class="text-left" style="width: 40px;">喜欢</th>
-            <th class="text-left" style="width: 140px;">添加时间</th>
             <th class="text-left" style="width: 90px;">操作</th>
             </tr>
             </thead>
@@ -97,9 +93,9 @@
             </tbody>
           </table>
           <div class="pagg"></div>
-          <div class="owo button-bar" style=" padding: 0; ">
+          <!-- <div class="owo button-bar" style=" padding: 0; ">
             <div class="owo button" onclick="deleteMore()">批量删除</div>
-          </div>
+          </div> -->
         </div>
         <!-- <div class="owo button" onclick="getValue()">获取检查结果</div> -->
       </div>
@@ -160,7 +156,7 @@
         })
       };
 
-      fetch("/getValue", requestOptions)
+      fetch("/getLable", requestOptions)
         .then(response => response.json())
         .then(result => {
           console.log(result)
@@ -185,11 +181,7 @@
       <td class="text-left">${element[0]}</td>
       <td class="text-left">${element[1]}</td>
       <td class="text-left">${element[2]}</td>
-      <td class="text-left">${element[6]}</td>
-      <td class="text-left">${element[3]}</td>
-      <td class="text-left">${element[4]}</td>
-      <td class="text-left">${new Date(element[5] * 1000).toLocaleString()}</td>
-      <td class="text-left"><span onclick="deleteItem('${element[0]}')">删除</span><span onclick="editItem('${element[0]}')">修改</span><span onclick="editBiaoqian('${element[0]}')">标签</span></td>
+      <td class="text-left"><span onclick="deleteItem('${element[0]}')">删除</span><span onclick="editItem('${element[0]}')">修改</span></td>
       </tr>`
           });
           document.querySelector('.table-hover').innerHTML = domList

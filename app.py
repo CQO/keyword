@@ -6,7 +6,12 @@ import random
 import mysql.connector
 from flask_cors import CORS
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 from flask import Flask, render_template, request, jsonify
+
+def extract_host(url):
+    parsed_url = urlparse(url)
+    return parsed_url.netloc
 
 app = Flask(__name__)
 CORS(app)  # 默认允许所有域名进行跨域请求
@@ -22,6 +27,10 @@ def page2():
 @app.route('/page3')
 def page3():
     return render_template('index3.html')
+
+@app.route('/page4')
+def page4():
+    return render_template('index4.html')
 
 def sendSMSTo(yzm, phone):
     """
@@ -202,7 +211,37 @@ def updataItem():
     mydb.close()
     return jsonify({"err": 0})
 
+@app.route('/updataBiaoqian', methods=['POST'])
+def updataBiaoqian():
+    # 获取 JSON 数据
+    data = request.json
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    host = extract_host(data["url"])
+    cursor = mydb.cursor(buffered=True)
+    data["keyword"] = json.dumps(data["keyword"], ensure_ascii=False)
+    cursor.execute("SELECT data FROM label WHERE url = '" + host + "';")
 
+    mydb.commit()
+    
+    dataTemp = cursor.fetchone()
+    if (dataTemp):
+        sqlTemp = "UPDATE `label` SET data = '%s' WHERE url = '%s';" % (data["keyword"], data["url"])
+        print(sqlTemp)
+        cursor.execute(sqlTemp)
+
+        mydb.commit()
+    else:
+        cursor.execute("INSERT INTO label (url, data) VALUES ('%s', '%s')" % (host, data["keyword"]))
+        mydb.commit()
+    
+    mydb.close()
+    return jsonify({"err": 0})
 
 @app.route('/searchItem', methods=['GET'])
 def searchItem():
@@ -344,7 +383,9 @@ def like():
         
         if (data["url"] not in dataTemp):
             dataTemp[data["url"]] = 0
-            
+        else:
+            mydb.close()
+            return jsonify({"err": 1, "msg": "一个网站只能喜欢一次!"})
         dataTemp[data["url"]] = dataTemp[data["url"]] + 1
         print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
@@ -382,7 +423,9 @@ def unLike():
         
         if (data["url"] not in dataTemp):
             dataTemp[data["url"]] = 0
-            
+        else:
+            mydb.close()
+            return jsonify({"err": 1, "msg": "一个网站只能喜欢一次!"})    
         dataTemp[data["url"]] = dataTemp[data["url"]] - 1
         print("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
         cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["username"]))
@@ -418,6 +461,13 @@ def recommend():
     if (userInfo):
         print(userInfo[3])
         returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+        # 推送热门的
+        if (int(random.uniform(1000, 9999)) < 1000):
+            cursor.execute("SELECT * FROM `keyword` ORDER BY likeNum DESC LIMIT 50;")
+            rows = cursor.fetchall()
+            if (len(rows) > 0):
+                returnItem = rows[int(random.uniform(0, len(rows) - 1))]
+                    
         # 找到他喜欢的
         if (int(random.uniform(1000, 9999)) < 6000):
             # 随机选一个他喜欢的分类
@@ -531,6 +581,32 @@ def getValue():
     rows = cursor.fetchall()
     if (int(data["page"]) == 1):
         cursor.execute("SELECT COUNT(*) FROM `keyword`;")
+        contNum = cursor.fetchone()
+        mydb.close()
+        return jsonify({"data": rows, "num": contNum[0]})
+    else:
+        mydb.close()
+        return jsonify({"data": rows})
+
+@app.route('/getLable', methods=['POST'])
+def getLable():
+    # 获取 JSON 数据
+    data = request.json
+    print(data["page"])
+    if ("page" not in data):
+        data["page"] = 1
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    cursor.execute("SELECT * FROM `label` LIMIT 20 OFFSET " + str((int(data["page"]) - 1) * 20))
+    rows = cursor.fetchall()
+    if (int(data["page"]) == 1):
+        cursor.execute("SELECT COUNT(*) FROM `label`;")
         contNum = cursor.fetchone()
         mydb.close()
         return jsonify({"data": rows, "num": contNum[0]})
