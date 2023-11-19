@@ -65,6 +65,11 @@ def clearData(url, strTemp, source):
         busyList.append([url, strTemp, source])
         return
     print('开始处理:' + url)
+    # 抖音只取#后面的
+    if ('www.douyin.com' in url and '#' in strTemp):
+        strTemp = strTemp.split('#')
+        del strTemp[0]
+        strTemp = '#'.join(strTemp)
     clearBusy = True
     if ('403 ' in strTemp):
         strTemp = ''
@@ -436,6 +441,8 @@ useRecommendTemp = {}
 @app.route('/recommend', methods=['GET'])
 def recommend():
     global useRecommendTemp
+    # 先获取用户数据
+    userName = request.args.get('user')
     # 创建连接
     mydb = mysql.connector.connect(
         host="logs.lamp.run",          # 数据库主机地址
@@ -444,24 +451,32 @@ def recommend():
         database="keyword"  # 数据库名称，可选
     )
     cursor = mydb.cursor(buffered=True)
+    if (userName not in useRecommendTemp):
+        useRecommendTemp[userName] = []
     cursor.execute("SELECT * FROM `keyword`;")
     rows = cursor.fetchall()
-    # 先获取用户数据
-    userName = request.args.get('user')
+    
     cursor.execute("SELECT * FROM `user` WHERE username = '%s';" % (userName))
     userInfo = cursor.fetchone()
-    
-    if (len(rows) < 1):
+    newRowList = []
+    for item in rows:
+        if (item[0] not in useRecommendTemp[userName]):
+            newRowList.append(item)
+    if (len(newRowList) < 1):
         return jsonify({"err": 1, "data": "网址数量不足!"})
     if (userInfo):
         randNum = round(random.uniform(1000, 9999))
-        returnItem = rows[round(random.uniform(0, len(rows) - 1))]
+        returnItem = newRowList[round(random.uniform(0, len(newRowList) - 1))]
         # 推送热门的
         if (randNum < 3000):
             cursor.execute("SELECT * FROM `keyword` ORDER BY likeNum DESC LIMIT 50;")
             rows = cursor.fetchall()
-            if (len(rows) > 0):
-                returnItem = rows[round(random.uniform(0, len(rows) - 1))]
+            newRowList = []
+            for item in rows:
+                if (item[0] not in useRecommendTemp[userName]):
+                    newRowList.append(item)
+            if (len(newRowList) > 0):
+                returnItem = newRowList[round(random.uniform(0, len(newRowList) - 1))]
                     
         # 找到他喜欢的
         if (randNum >= 3000 and randNum < 9000):
@@ -471,23 +486,17 @@ def recommend():
                     tempObj = userInfo[4].replace("'", '"')
                     tempObj = json.loads(tempObj)
                     print(tempObj)
-                    likeStr = tempObj[round(random.uniform(0, len(tempObj) - 1))]
-                    cursor.execute("SELECT * FROM `keyword` WHERE data LIKE '%" + likeStr[0] + "%';")
-                    rows = cursor.fetchall()
-                    if (len(rows) > 0):
-                        returnItem = rows[round(random.uniform(0, len(rows) - 1))]
-        if (userName not in useRecommendTemp):
-            useRecommendTemp[userName] = []
-        # 第一次随机推
-        if (returnItem[1] in useRecommendTemp[userName]):
-            returnItem = rows[round(random.uniform(0, len(rows) - 1))]
-        # 第二次随机推
-        if (returnItem[1] in useRecommendTemp[userName]):
-            returnItem = rows[round(random.uniform(0, len(rows) - 1))]
-        # 第三次次随机推
-        if (returnItem[1] in useRecommendTemp[userName]):
-            returnItem = rows[round(random.uniform(0, len(rows) - 1))]
-        useRecommendTemp[userName].append(useRecommendTemp[userName])
+                    if (len(tempObj) > 0):
+                        likeStr = tempObj[round(random.uniform(0, len(tempObj) - 1))]
+                        cursor.execute("SELECT * FROM `keyword` WHERE data LIKE '%" + likeStr[0] + "%';")
+                        rows = cursor.fetchall()
+                        newRowList = []
+                        for item in rows:
+                            if (item[0] not in useRecommendTemp[userName]):
+                                newRowList.append(item)
+                        if (len(newRowList) > 0):
+                            returnItem = newRowList[round(random.uniform(0, len(newRowList) - 1))]
+        useRecommendTemp[userName].append(returnItem[0])
         mydb.close()
         return jsonify({"err": 0, "data": returnItem, "like": returnItem[1] in userInfo[3]})
     else:
@@ -533,31 +542,28 @@ def addKeyWord():
             data['user'] = data['source']
     if ('user' not in data):
         return jsonify({"err": 1, "msg": "user字段不存在"})
-    # # 创建连接
-    # mydb = mysql.connector.connect(
-    #     host="logs.lamp.run",          # 数据库主机地址
-    #     user="root",     # 数据库用户名
-    #     password="mmit7750", # 数据库密码
-    #     database="keyword"  # 数据库名称，可选
-    # )
-    
-    # cursor = mydb.cursor(buffered=True)
-    # # 添加喜欢
-    # cursor.execute("SELECT data FROM user WHERE username = '" + data["user"] + "';")
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    # 添加喜欢
+    cursor.execute("SELECT data FROM user WHERE username = '" + data["user"] + "';")
 
-    # mydb.commit()
-    # dataTemp = cursor.fetchone()
-    # if (data["url"] not in dataTemp):
-    #     dataTemp[data["url"]] = 0
-            
-    # dataTemp[data["url"]] = dataTemp[data["url"]] + 2
-    # cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["user"]))
-    # mydb.commit()
+    mydb.commit()
+    dataTemp = cursor.fetchone()
+    dataTemp = json.loads(dataTemp[0])
     for item in data["list"]:
-        # cursor.execute("SELECT * FROM `keyword` WHERE url ='" + item["url"] + "'")
-        # rows = cursor.fetchone()
         
-        # if (not rows):
+        if (item["url"] not in dataTemp):
+            dataTemp[item["url"]] = 0
+                
+        dataTemp[item["url"]] = dataTemp[item["url"]] + 2
+        cursor.execute("UPDATE user SET data = '%s' WHERE username = '%s';" % (json.dumps(dataTemp), data["user"]))
+        mydb.commit()
         if ("matchTemp" in item and "url" in item):
             clearData(item["url"], item["matchTemp"], data["user"])
     # mydb.close()
@@ -596,6 +602,29 @@ def getValue():
     else:
         mydb.close()
         return jsonify({"data": rows})
+
+@app.route('/setLable', methods=['POST'])
+def setLable():
+    # 获取 JSON 数据
+    data = request.json
+    if ("url" not in data):
+        return jsonify({"err": 1, "msg":"url字段不存在"})
+    if ("lable" not in data):
+        return jsonify({"err": 1, "msg":"lable字段不存在"})
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    sqlTemp = "INSERT IGNORE INTO `label` (url, data) VALUES ('%s', '%s')" % (data['url'], data["lable"])
+    print(sqlTemp)
+    cursor.execute(sqlTemp)
+    mydb.commit()
+    mydb.close()
+    return jsonify({"err": 0, "msg":"更新成功"})
 
 @app.route('/getLable', methods=['POST'])
 def getLable():

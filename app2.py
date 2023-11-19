@@ -20,6 +20,8 @@ def runJob():
     keywordTemp = cursor.fetchall()
     cursor.execute("SELECT * FROM `user`")
     userTemp = cursor.fetchall()
+    cursor.execute("SELECT * FROM `label`")
+    labelTemp = cursor.fetchall()
     
     keywordTemp2 = {}
     userTemp2 = {}
@@ -53,6 +55,13 @@ def runJob():
         # temp = list(userTemp2[userID].keys())
         # temp = temp[0:10]
         cursor.execute("UPDATE user SET `like` = '%s' WHERE id = '%s';" % (json.dumps(temp, ensure_ascii=False), userID))
+    
+    # 更新视频标签
+    for labelItem in labelTemp:
+        for keyworditem in keywordTemp:
+            if (labelItem[1] in keyworditem[1]):
+                print(keyworditem[1])
+                cursor.execute("UPDATE keyword SET `keyword` = '%s' WHERE url = '%s';" % (labelItem[2], keyworditem[1]))
     mydb.commit()
     mydb.close()
 runJob()
