@@ -32,6 +32,10 @@ def page3():
 def page4():
     return render_template('index4.html')
 
+@app.route('/page5')
+def page5():
+    return render_template('index5.html')
+
 def sendSMSTo(yzm, phone):
     """
     能用接口发短信
@@ -502,6 +506,31 @@ def recommend():
     else:
         mydb.close()
         return jsonify({"err": 1, "data": "用户不存在!"})
+
+@app.route('/recommendTag', methods=['GET'])
+def recommendTag():
+    global useRecommendTemp
+    # 先获取用户数据
+    userName = request.args.get('user')
+    key = request.args.get('key')
+    # 创建连接
+    mydb = mysql.connector.connect(
+        host="logs.lamp.run",          # 数据库主机地址
+        user="root",     # 数据库用户名
+        password="mmit7750", # 数据库密码
+        database="keyword"  # 数据库名称，可选
+    )
+    cursor = mydb.cursor(buffered=True)
+    if (userName not in useRecommendTemp):
+        useRecommendTemp[userName] = []
+    cursor.execute("SELECT * FROM `keyword` WHERE keyword = '" + key + "'")
+    rows = cursor.fetchall()
+    mydb.close()
+    if (len(rows) < 1):
+        return jsonify({"err": 1, "msg": "该分类下没有视频"})
+    returnItem = rows[round(random.uniform(0, len(rows) - 1))]
+    
+    return jsonify({"err": 0, "data": returnItem})
 
 @app.route('/checkLike', methods=['POST'])
 def checkLike():

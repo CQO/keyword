@@ -62,16 +62,17 @@
     <div class="fr-box">
       <div class="lf-box">
         <div class="menu-item"><a href="./page3">用户管理</a></div>
-        <div class="menu-item cative"><a href="./">网址添加</a></div>
+        <div class="menu-item"><a href="./">网址添加</a></div>
         <div class="menu-item"><a href="./page2">网址管理</a></div>
-        <div class="menu-item"><a href="./page5">标签添加</a></div>
+        <div class="menu-item cative"><a href="./page5">标签添加</a></div>
         <div class="menu-item"><a href="./page4">域名标签</a></div>
       </div>
       <div class="right-box">
-        <h3>网址添加并获取关键词</h3>
-        <textarea style="height: 300px;"></textarea>
+        <h3>网址</h3>
+        <input type="text" id="wz" placeholder="网址">
+        <h3>关键词</h3>
+        <input type="text" id="gjc" placeholder="关键词">
         <div class="owo button" onclick="check()">批量添加</div>
-        <div class="owo button"><input type="file" style="position: absolute;width: 100%;height: 100%;opacity: 0;" id="fileInput" />导入CSV</div>
       </div>
     </div>
     
@@ -83,14 +84,12 @@
   <script src="https://cunchu.site/work/login/mini.js" type="text/javascript" charset="UTF-8"></script>
   <script>
     function check() {
-      let tempList = document.querySelector('textarea').value
-      tempList = tempList.split('\n')
       var myHeaders = new Headers();
       myHeaders.append("Content-Type", "application/json");
 
       var raw = JSON.stringify({
-        "urlList": tempList,
-        "source": "后台添加"
+        "url":window.wz.value,
+        "lable":window.gjc.value
       });
 
       var requestOptions = {
@@ -100,13 +99,12 @@
         redirect: 'follow'
       };
 
-      fetch("/webSite", requestOptions)
+      fetch("/setLable", requestOptions)
         .then(response => response.text())
         .then(result => {
-          location.href = 'page2'
+          location.href = 'page4'
         })
         .catch(error => console.log('error', error));
-      console.log(tempList)
     }
     function getValue () {
       var myHeaders = new Headers();
